@@ -1,5 +1,6 @@
 import time
 import random
+import colorsys
 
 ts = time.time()
 local_time = time.localtime(ts)
@@ -9,45 +10,39 @@ rng = random.Random(ts)
 GRID_SIZE = 32
 CELL_PX = 1
 
-# 工具：0xRRGGBB → (r,g,b)
-def hex2rgb(v: int):
-    r = (v >> 16) & 0xFF
-    g = (v >> 8) & 0xFF
-    b = v & 0xFF
-    return (r, g, b)
+# 主色：时间种子生成唯一色相 H，固定饱和度
+base_h = rng.random()
+base_s = rng.uniform(0.55, 0.85)
+base_l = rng.uniform(0.4, 0.65)
 
-# 工具：(r,g,b) → #RRGGBB
-def rgb2hex(r,g,b):
-    return f"#{r:02X}{g:02X}{b:02X}"
+# hsl(0~1,0~1,0~1) -> #RRGGBB
+def hsl2hex(h, s, l):
+    r, g, b = colorsys.hls_to_rgb(h, l, s)
+    return f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
 
-# 工具：两个rgb之间插值
-def lerp(a, b, t):
-    return int(a + (b - a) * t)
-
-# 【重点：只生成2个主题色，整张图的基调】
-base1 = rng.randint(0, 0xFFFFFF)
-base2 = rng.randint(0, 0xFFFFFF)
-r1,g1,b1 = hex2rgb(base1)
-r2,g2,b2 = hex2rgb(base2)
+# 主色（基准主题色）
+main_color_hex = hsl2hex(base_h, base_s, base_l)
+# 转0xRRGGBB格式给你UIK用
+mr = int(main_color_hex[1:3],16)
+mg = int(main_color_hex[3:5],16)
+mb = int(main_color_hex[5:7],16)
+main_color_uik = (mr << 16) | (mg << 8) | mb
 
 rects = []
 color_list = []
 
 for y in range(GRID_SIZE):
     for x in range(GRID_SIZE):
-        # 根据坐标得到插值系数
-        t = (x + y) / (GRID_SIZE * 2)
-        # 基础插值
-        rr = lerp(r1, r2, t)
-        gg = lerp(g1, g2, t)
-        bb = lerp(b1, b2, t)
-        # 微小扰动，防止过于死板（幅度很小，不会跑偏色系）
-        noise = 12
-        rr = max(0, min(255, rr + rng.randint(-noise, noise)))
-        gg = max(0, min(255, gg + rng.randint(-noise, noise)))
-        bb = max(0, min(255, bb + rng.randint(-noise, noise)))
+        # 只在【同一个色相】附近小幅扰动，不换色调！
+        h = base_h + rng.uniform(-0.025, 0.025)
+        h = h % 1.0
+        # 亮度大范围变化（亮/暗），形成层次
+        l = rng.uniform(0.22, 0.82)
+        # 饱和度轻微浮动
+        s = base_s + rng.uniform(-0.12, 0.12)
+        s = max(0.15, min(0.92, s))
 
-        c = rgb2hex(rr, gg, bb)
+        c = hsl2hex(h, s, l)
         color_list.append(c)
         x0 = x * CELL_PX
         y0 = y * CELL_PX
@@ -69,8 +64,8 @@ with open(svg_path, "w", encoding="utf-8") as f:
 log_content = f"""timestamp: {ts}
 time: {time_str}
 grid: {GRID_SIZE}x{GRID_SIZE}
-theme_color_1: 0x{base1:06X} {rgb2hex(r1,g1,b1)}
-theme_color_2: 0x{base2:06X} {rgb2hex(r2,g2,b2)}
+main_theme_color: 0x{main_color_uik:06X} {main_color_hex}
+base_hsl: h={base_h:.4f}, s={base_s:.4f}, l={base_l:.4f}
 colors (row-major):
 """
 for i in range(len(color_list)):
@@ -81,5 +76,4 @@ for i in range(len(color_list)):
 with open(log_path, "w", encoding="utf-8") as f:
     f.write(log_content)
 
-print("Generated theme svg OK")
-print(f"Base1: 0x{base1:06X}, Base2:0x{base2:06X}")
+print(f"✅ Theme color: 0x{main_color_uik:06X} {main_color_hex}")
