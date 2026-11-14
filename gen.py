@@ -1,9 +1,5 @@
 import time
 import random
-import os
-
-OUT_DIR = "out"
-os.makedirs(OUT_DIR, exist_ok=True)
 
 ts = time.time()
 local_time = time.localtime(ts)
@@ -11,7 +7,7 @@ time_str = time.strftime("%Y-%m-%d_%H-%M-%S", local_time)
 rng = random.Random(ts)
 
 GRID_SIZE = 32
-CELL_PX = 1  # 严格32×32像素
+CELL_PX = 1
 
 def rand_color() -> str:
     v = rng.randint(0, 0xFFFFFF)
@@ -34,13 +30,12 @@ svg_content = f'''<svg width="{svg_width}" height="{svg_height}" xmlns="http://w
 {"".join(rects)}
 </svg>'''
 
-# 写入独立svg文件
-svg_path = os.path.join(OUT_DIR, f"grid32_{time_str}.svg")
+svg_path = "color.svg"
+log_path = "color.log"
+
 with open(svg_path, "w", encoding="utf-8") as f:
     f.write(svg_content)
 
-# log 里面：颜色表 + 完整svg源码
-log_path = os.path.join(OUT_DIR, f"grid32_{time_str}.log")
 log_content = f"""timestamp: {ts}
 time: {time_str}
 grid: {GRID_SIZE}x{GRID_SIZE}
@@ -57,11 +52,3 @@ log_content += svg_content
 
 with open(log_path, "w", encoding="utf-8") as f:
     f.write(log_content)
-
-# 重点：打印完整SVG到Action日志，网页直接复制
-print("===== SVG START =====")
-print(svg_content)
-print("===== SVG END =====")
-
-print(f"✅ 生成svg文件：{svg_path}")
-print(f"✅ 生成log文件：{log_path}")
