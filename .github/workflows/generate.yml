@@ -1,0 +1,42 @@
+name: Generate 32x32 color grid SVG
+on:
+  workflow_dispatch:
+  schedule:
+    # UTC 0,4,8,12,16,20 点执行（UTC，北京时间 = UTC+8）
+    # UTC 0 → 北京时间 08:00
+    # UTC 4 → 北京时间 12:00
+    # UTC 8 → 北京时间 16:00
+    # UTC 12 → 北京时间 20:00
+    # UTC 16 → 北京时间 00:00
+    # UTC 20 → 北京时间 04:00
+    - cron: '0 0,4,8,12,16,20 * * *'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    # 关键：同一时间只允许一个实例跑，防止堆积
+    concurrency:
+      group: ${{ github.workflow }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 随机休眠 0~180秒，打散精准整点触发的特征
+      - name: Random sleep anti-rate-limit
+        run: |
+          sleep $((RANDOM % 180))
+
+      - name: Run generator
+        run: python3 gen.py
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: grid-output
+          path: out/
+          retention-days: 7
