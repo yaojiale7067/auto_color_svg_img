@@ -30,14 +30,16 @@ for y in range(GRID_SIZE):
 svg_width = GRID_SIZE * CELL_PX
 svg_height = GRID_SIZE * CELL_PX
 
-svg = f'''<svg width="{svg_width}" height="{svg_height}" xmlns="http://www.w3.org/2000/svg">
+svg_content = f'''<svg width="{svg_width}" height="{svg_height}" xmlns="http://www.w3.org/2000/svg">
 {"".join(rects)}
 </svg>'''
 
+# 写入独立svg文件
 svg_path = os.path.join(OUT_DIR, f"grid32_{time_str}.svg")
 with open(svg_path, "w", encoding="utf-8") as f:
-    f.write(svg)
+    f.write(svg_content)
 
+# log 里面：颜色表 + 完整svg源码
 log_path = os.path.join(OUT_DIR, f"grid32_{time_str}.log")
 log_content = f"""timestamp: {ts}
 time: {time_str}
@@ -50,8 +52,16 @@ for i in range(len(color_list)):
     if (i+1) % GRID_SIZE == 0:
         log_content += "\n"
 
+log_content += "\n===== FULL SVG SOURCE =====\n"
+log_content += svg_content
+
 with open(log_path, "w", encoding="utf-8") as f:
     f.write(log_content)
 
-print(f"✅ 生成：{svg_path}")
-print(f"✅ 日志：{log_path}")
+# 重点：打印完整SVG到Action日志，网页直接复制
+print("===== SVG START =====")
+print(svg_content)
+print("===== SVG END =====")
+
+print(f"✅ 生成svg文件：{svg_path}")
+print(f"✅ 生成log文件：{log_path}")
